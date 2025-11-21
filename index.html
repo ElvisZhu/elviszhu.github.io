@@ -1,1 +1,512 @@
-Hello World
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>24点 - 每日挑战记录版</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --card-bg: #ffffff;
+            --bg-color: #f0f4f8;
+            --selected-color: #ffeb3b;
+            --text-color: #333;
+            --accent-color: #2196F3;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+
+        /* --- 用户栏 & 顶部 --- */
+        .top-bar {
+            width: 100%;
+            background: white;
+            padding: 10px 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        .user-group { display: flex; gap: 10px; align-items: center; }
+
+        .user-info { font-size: 16px; font-weight: bold; color: var(--text-color); }
+        .score-badge { background: var(--accent-color); color: white; padding: 2px 8px; border-radius: 12px; font-size: 14px; }
+
+        .header { margin-top: 1rem; text-align: center; }
+        .header h1 { margin-bottom: 5px; }
+
+        /* --- 游戏区域 --- */
+        .container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 350px;
+            margin-top: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card {
+            width: 80px; height: 110px;
+            background: var(--card-bg);
+            border: 2px solid #333; border-radius: 10px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 28px; font-weight: bold; color: var(--text-color);
+            box-shadow: 3px 3px 8px rgba(0,0,0,0.15);
+            cursor: pointer; transition: all 0.3s ease;
+            position: absolute; 
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: 3px 8px 15px rgba(0,0,0,0.2); }
+        .card.selected { background-color: var(--selected-color); border-color: #ff9800; transform: scale(1.1); z-index: 10; }
+        .card span.expr { font-size: 12px; color: #666; margin-top: 5px; font-weight: normal; }
+
+        /* --- 弹窗 & 遮罩 --- */
+        .overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 90; backdrop-filter: blur(2px);
+        }
+        .modal {
+            display: none; position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); background: white;
+            padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 100; text-align: center; min-width: 320px; max-height: 80vh; overflow-y: auto;
+        }
+
+        /* 运算菜单 */
+        .op-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .op-btn { padding: 10px; border: 1px solid #ddd; background: white; border-radius: 8px; cursor: pointer; font-size: 16px; }
+        .op-btn:hover { background-color: var(--primary-color); color: white; }
+
+        /* 表格样式 */
+        table.data-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 14px;}
+        table.data-table th { text-align: left; color: #555; border-bottom: 2px solid #eee; padding: 8px; background: #f9f9f9;}
+        table.data-table td { padding: 8px; border-bottom: 1px solid #eee; }
+        .rank-1 { color: #FFD700; font-weight: bold; } 
+
+        /* --- 按钮 --- */
+        .controls { margin-top: 1rem; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        button.ctrl-btn {
+            padding: 8px 16px; font-size: 14px; border: none; border-radius: 20px;
+            cursor: pointer; background-color: #2196F3; color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: transform 0.1s;
+        }
+        button.ctrl-btn:active { transform: scale(0.95); }
+        button.btn-reset { background-color: #ff9800; }
+        button.btn-custom { background-color: #9c27b0; }
+        button.btn-gray { background-color: #607d8b; }
+        button.btn-history { background-color: #009688; }
+
+        input.name-input { padding: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px; width: 80%; margin: 15px 0; }
+        
+        .message-box { height: 30px; margin-top: 10px; font-size: 16px; font-weight: bold; }
+        .success { color: #2e7d32; }
+        .fail { color: #c62828; }
+
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="user-info" id="user-display">未登录</div>
+        <div class="user-group">
+            <button class="ctrl-btn btn-history" onclick="showHistory()">📅 我的记录</button>
+            <button class="ctrl-btn btn-gray" onclick="showLeaderboard()">🏆 排行榜</button>
+            <button class="ctrl-btn btn-gray" onclick="showLoginModal(true)">🔁 切换</button>
+        </div>
+    </div>
+
+    <div class="header">
+        <h1>🎴 24点大挑战</h1>
+        <p style="color: #666; font-size: 12px;">系统会自动记录你每天的解题数量</p>
+    </div>
+
+    <div class="message-box" id="message"></div>
+
+    <div class="container" id="game-area"></div>
+
+    <div class="controls">
+        <button class="ctrl-btn btn-reset" onclick="resetGame()">重置本题</button>
+        <button class="ctrl-btn" onclick="newGame()">随机下一题</button>
+        <button class="ctrl-btn btn-custom" onclick="customGame()">自定义题目</button>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+
+    <div class="modal" id="op-menu">
+        <h3>选择运算</h3>
+        <div class="op-options" id="op-list"></div>
+        <div style="margin-top: 15px;">
+            <button class="ctrl-btn btn-reset" onclick="closeModal('op-menu')">取消</button>
+        </div>
+    </div>
+
+    <div class="modal" id="login-modal" style="z-index: 200;">
+        <h2>👋 欢迎挑战</h2>
+        <p>输入名字，记录你的每日成就</p>
+        <input type="text" id="username-input" class="name-input" placeholder="例如: 算术王" maxlength="10">
+        <div><button class="ctrl-btn" onclick="handleLogin()">开始游戏</button></div>
+    </div>
+
+    <div class="modal" id="leaderboard-modal">
+        <h2>🏆 总分排行榜</h2>
+        <table class="data-table">
+            <thead><tr><th>排名</th><th>玩家</th><th>总题数</th><th>总积分</th></tr></thead>
+            <tbody id="leaderboard-body"></tbody>
+        </table>
+        <div style="margin-top: 15px;"><button class="ctrl-btn" onclick="closeModal('leaderboard-modal')">关闭</button></div>
+    </div>
+
+    <div class="modal" id="history-modal">
+        <h2 id="history-title">📅 历史记录</h2>
+        <div style="max-height: 300px; overflow-y: auto;">
+            <table class="data-table">
+                <thead><tr><th>日期</th><th>解题数量</th><th>获得积分</th></tr></thead>
+                <tbody id="history-body"></tbody>
+            </table>
+        </div>
+        <div style="margin-top: 15px;"><button class="ctrl-btn" onclick="closeModal('history-modal')">关闭</button></div>
+    </div>
+
+<script>
+    // --- 全局配置 ---
+    const TARGET = 24;
+    const STORAGE_KEY = 'game24_data_v2'; // 使用新Key以应用新数据结构
+    const POINTS_PER_WIN = 10;
+
+    // 游戏状态
+    let initialNumbers = []; 
+    let currentCards = [];   
+    let selectedIds = [];    
+    let cardIdCounter = 0;   
+    let isCustomMode = false; 
+
+    // 数据结构定义
+    // appData = {
+    //    users: {
+    //       "Alice": { totalScore: 100, history: { "2023-10-01": 20, "2023-10-02": 80 } }
+    //    },
+    //    currentUser: "Alice"
+    // }
+    let appData = { users: {}, currentUser: null };
+
+    // --- 初始化 ---
+    window.onload = function() {
+        loadData();
+        if (!appData.currentUser) {
+            showLoginModal(false);
+        } else {
+            updateUserDisplay();
+            newGame();
+        }
+    };
+
+    // --- 数据管理 ---
+    function loadData() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+            try { appData = JSON.parse(raw); } catch(e) { console.error("数据损坏", e); }
+        }
+        if (!appData.users) appData.users = {};
+    }
+
+    function saveData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+    }
+
+    function getTodayStr() {
+        const now = new Date();
+        // 处理时区问题，简单的 YYYY-MM-DD
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function addScore() {
+        if (!appData.currentUser || isCustomMode) return;
+        
+        const user = appData.currentUser;
+        // 确保用户数据结构存在
+        if (!appData.users[user]) {
+            appData.users[user] = { totalScore: 0, history: {} };
+        }
+        // 确保 history 对象存在 (兼容旧数据)
+        if (!appData.users[user].history) {
+            appData.users[user].history = {};
+        }
+        if (typeof appData.users[user].totalScore !== 'number') {
+             appData.users[user].totalScore = 0;
+        }
+
+        const today = getTodayStr();
+        
+        // 更新今日分数
+        const currentDayScore = appData.users[user].history[today] || 0;
+        appData.users[user].history[today] = currentDayScore + POINTS_PER_WIN;
+        
+        // 更新总分
+        appData.users[user].totalScore += POINTS_PER_WIN;
+
+        saveData();
+        updateUserDisplay();
+    }
+
+    // --- UI显示逻辑 ---
+    function showLoginModal(canClose) {
+        const overlay = document.getElementById('overlay');
+        document.getElementById('username-input').value = "";
+        openModal('login-modal');
+        if (!canClose) {
+            overlay.onclick = null; // 强制登录不可关闭遮罩
+        }
+    }
+
+    function handleLogin() {
+        const name = document.getElementById('username-input').value.trim();
+        if (!name) return alert("请输入名字");
+
+        appData.currentUser = name;
+        // 初始化新用户结构
+        if (!appData.users[name]) {
+            appData.users[name] = { totalScore: 0, history: {} };
+        }
+        saveData();
+        closeModal('login-modal');
+        updateUserDisplay();
+        if(currentCards.length === 0) newGame();
+    }
+
+    function updateUserDisplay() {
+        const display = document.getElementById('user-display');
+        if (appData.currentUser && appData.users[appData.currentUser]) {
+            const score = appData.users[appData.currentUser].totalScore || 0;
+            display.innerHTML = `👤 ${appData.currentUser} <span class="score-badge">${score}分</span>`;
+        } else {
+            display.innerHTML = "未登录";
+        }
+    }
+
+    // --- 排行榜 (总分) ---
+    function showLeaderboard() {
+        const tbody = document.getElementById('leaderboard-body');
+        tbody.innerHTML = '';
+        
+        const list = Object.entries(appData.users)
+            .map(([name, data]) => ({
+                name, 
+                score: data.totalScore || 0
+            }))
+            .sort((a, b) => b.score - a.score);
+
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">暂无记录</td></tr>';
+        } else {
+            list.forEach((u, idx) => {
+                // 题数 = 分数 / 10
+                let count = Math.floor(u.score / POINTS_PER_WIN);
+                let row = `<tr>
+                    <td class="${idx===0?'rank-1':''}">${idx + 1}</td>
+                    <td style="font-weight:bold">${u.name} ${u.name === appData.currentUser ? '(你)' : ''}</td>
+                    <td>${count} 题</td>
+                    <td>${u.score}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+        openModal('leaderboard-modal');
+    }
+
+    // --- 历史记录 (日期维度) ---
+    function showHistory() {
+        if (!appData.currentUser) return alert("请先登录");
+        
+        const userData = appData.users[appData.currentUser];
+        const history = userData.history || {};
+        const tbody = document.getElementById('history-body');
+        document.getElementById('history-title').innerText = `📅 ${appData.currentUser} 的记录`;
+        tbody.innerHTML = '';
+
+        // 按日期降序排列 (最新的在上面)
+        const dates = Object.keys(history).sort((a, b) => new Date(b) - new Date(a));
+
+        if (dates.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#888;">还没玩过游戏哦，快去挑战吧！</td></tr>';
+        } else {
+            dates.forEach(date => {
+                let score = history[date];
+                let count = Math.floor(score / POINTS_PER_WIN);
+                let row = `<tr>
+                    <td>${date}</td>
+                    <td style="font-weight:bold; color:#2196F3;">${count} 题</td>
+                    <td>+${score}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+        openModal('history-modal');
+    }
+
+    // --- 游戏核心逻辑 (保持不变) ---
+    function isSolvable(numsData) {
+        if (numsData.length === 0) return false;
+        if (numsData.length === 1) return Math.abs(numsData[0].val - TARGET) < 0.0001;
+        for (let i = 0; i < numsData.length; i++) {
+            for (let j = 0; j < numsData.length; j++) {
+                if (i === j) continue;
+                let x = numsData[i].val, y = numsData[j].val;
+                let rem = numsData.filter((_, k) => k!==i && k!==j);
+                let ops = [x+y, x*y, x-y];
+                if (Math.abs(y) > 0.0001) ops.push(x/y);
+                for (let v of ops) if (isSolvable([...rem, {val:v}])) return true;
+            }
+        }
+        return false;
+    }
+
+    function newGame() {
+        isCustomMode = false;
+        while(true) {
+            let nums = Array.from({length:4}, () => Math.floor(Math.random()*13)+1);
+            if(isSolvable(nums.map(n=>({val:n})))) { startGame(nums); break; }
+        }
+    }
+
+    function customGame() {
+        let input = prompt("输入4个数字 (空格分隔):");
+        if(!input) return;
+        let parts = input.replace(/[,，]/g, ' ').trim().split(/\s+/);
+        if(parts.length!==4) return alert("需要4个数字");
+        let nums = parts.map(Number);
+        if(nums.some(isNaN)) return alert("无效数字");
+        
+        isCustomMode = true;
+        startGame(nums);
+        if(!isSolvable(nums.map(n=>({val:n})))) setMessage("⚠️ 此题无解 (自定义模式)", "fail");
+        else setMessage("自定义题目 (不计分)", "success");
+    }
+
+    function startGame(nums) {
+        initialNumbers = [...nums];
+        resetGame();
+    }
+
+    function resetGame() {
+        cardIdCounter = 0;
+        currentCards = initialNumbers.map(n => ({ val: n, expr: n.toString(), id: cardIdCounter++ }));
+        selectedIds = [];
+        closeModal('op-menu');
+        renderCards();
+        if(!isCustomMode) setMessage("点击两张牌运算", "normal");
+    }
+
+    function renderCards() {
+        const con = document.getElementById('game-area');
+        con.innerHTML = '';
+        const count = currentCards.length;
+        const startX = (600 - (count * 90)) / 2 + 10;
+        
+        currentCards.forEach((c, i) => {
+            let d = document.createElement('div');
+            d.className = `card ${selectedIds.includes(c.id)?'selected':''}`;
+            d.innerHTML = `<div>${Math.round(c.val*100)/100}</div>${c.expr!==c.val.toString()?`<span class='expr'>${c.expr}</span>`:''}`;
+            d.style.left = (startX + i*90) + 'px';
+            d.onclick = () => handleCardClick(c.id);
+            con.appendChild(d);
+        });
+    }
+
+    function handleCardClick(id) {
+        if (selectedIds.includes(id)) selectedIds = selectedIds.filter(i => i !== id);
+        else selectedIds.push(id);
+        renderCards();
+        if (selectedIds.length === 2) showOps();
+        else if (selectedIds.length > 2) { selectedIds.shift(); renderCards(); showOps(); }
+    }
+
+    function showOps() {
+        const [id1, id2] = selectedIds;
+        const c1 = currentCards.find(c=>c.id===id1), c2 = currentCards.find(c=>c.id===id2);
+        const list = document.getElementById('op-list');
+        list.innerHTML = '';
+        
+        const addBtn = (v1, v2, op) => {
+            let res = 0;
+            if(op==='+') res = v1.val+v2.val;
+            else if(op==='-') res = v1.val-v2.val;
+            else if(op==='*') res = v1.val*v2.val;
+            else if(op==='/') { if(Math.abs(v2.val)<0.0001) return; res = v1.val/v2.val; }
+            
+            let b = document.createElement('button');
+            b.className = 'op-btn';
+            b.innerHTML = `${Math.round(v1.val*100)/100} ${op} ${Math.round(v2.val*100)/100} = <b>${Math.round(res*1000)/1000}</b>`;
+            b.onclick = () => applyOp(v1, v2, res, `(${v1.expr}${op}${v2.expr})`);
+            list.appendChild(b);
+        };
+
+        addBtn(c1, c2, '+'); addBtn(c1, c2, '-'); addBtn(c2, c1, '-');
+        addBtn(c1, c2, '*'); addBtn(c1, c2, '/'); addBtn(c2, c1, '/');
+        openModal('op-menu');
+    }
+
+    function applyOp(c1, c2, val, expr) {
+        closeModal('op-menu');
+        let next = currentCards.filter(c=>c.id!==c1.id && c.id!==c2.id);
+        next.push({val, expr, id: cardIdCounter++});
+
+        // 快速死局检测
+        if(next.length > 1 && !isSolvable(next.map(c=>({val:c.val})))) {
+            currentCards = next; renderCards();
+            setTimeout(() => { alert("❌ 死局！即将重置。"); resetGame(); }, 300);
+            return;
+        }
+
+        currentCards = next; selectedIds = []; renderCards();
+
+        if(currentCards.length === 1) {
+            if(Math.abs(currentCards[0].val - TARGET) < 0.0001) {
+                if(!isCustomMode) {
+                    addScore();
+                    setMessage("🎉 成功！积分+10", "success");
+                } else {
+                    setMessage("🎉 成功！(不计分)", "success");
+                }
+                // setTimeout(() => { if(confirm("继续下一题？")) newGame(); }, 500);
+                setTimeout(() => { newGame(); }, 1000);
+
+            } else {
+                setMessage(`❌ 结果是 ${Math.round(currentCards[0].val*100)/100}`, "fail");
+                setTimeout(resetGame, 1000);
+            }
+        }
+    }
+
+    function setMessage(txt, type="normal") {
+        const el = document.getElementById('message');
+        el.innerText = txt; el.className = "message-box " + type;
+    }
+
+    // 弹窗控制
+    function openModal(id) {
+        document.getElementById('overlay').style.display = 'block';
+        document.getElementById(id).style.display = 'block';
+        if(id !== 'login-modal') document.getElementById('overlay').onclick = () => closeModal(id);
+    }
+    function closeModal(id) {
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById(id).style.display = 'none';
+        selectedIds = []; renderCards();
+    }
+</script>
+</body>
+</html>
