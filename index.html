@@ -2,511 +2,707 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>24点 - 每日挑战记录版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>24点 - 极速流畅版</title>
     <style>
         :root {
-            --primary-color: #4CAF50;
-            --card-bg: #ffffff;
-            --bg-color: #f0f4f8;
-            --selected-color: #ffeb3b;
-            --text-color: #333;
-            --accent-color: #2196F3;
+            --primary: #4CAF50;
+            --secondary: #2196F3;
+            --accent: #FF9800;
+            --bg: #f4f7f6;
+            --card-bg: #fff;
+            --text-main: #333;
+            --gap-size: 15px;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            /* 禁止移动端长按选中文本 */
+            -webkit-user-select: none;
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* --- 用户栏 & 顶部 --- */
+        /* --- 顶部栏 --- */
         .top-bar {
             width: 100%;
-            background: white;
-            padding: 10px 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            background: #fff;
+            padding: 12px 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             display: flex;
             justify-content: space-between;
             align-items: center;
             box-sizing: border-box;
+            position: sticky;
+            top: 0;
+            z-index: 50;
         }
 
-        .user-group { display: flex; gap: 10px; align-items: center; }
+        .user-pill {
+            display: flex;
+            align-items: center;
+            background: #eef2f5;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-main);
+            cursor: pointer;
+        }
+        .user-pill .score { color: var(--secondary); margin-left: 5px; }
 
-        .user-info { font-size: 16px; font-weight: bold; color: var(--text-color); }
-        .score-badge { background: var(--accent-color); color: white; padding: 2px 8px; border-radius: 12px; font-size: 14px; }
+        .top-actions button {
+            background: none;
+            border: none;
+            font-size: 20px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
 
-        .header { margin-top: 1rem; text-align: center; }
-        .header h1 { margin-bottom: 5px; }
+        /* --- 游戏主区域 --- */
+        .game-header { text-align: center; margin-top: 2vh; }
+        .game-header h1 { margin: 0; font-size: 24px; color: #444; }
+        .game-header p { margin: 5px 0 0; color: #888; font-size: 13px; }
 
-        /* --- 游戏区域 --- */
-        .container {
-            position: relative;
-            width: 100%;
-            max-width: 600px;
-            height: 350px;
-            margin-top: 1rem;
+        .message-area {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px 0;
+            transition: all 0.3s;
+        }
+        .msg-success { color: var(--primary); transform: scale(1.1); }
+        .msg-error { color: #E91E63; }
+
+        /* 卡牌容器：使用 Flexbox 实现响应式布局 */
+        .cards-container {
             display: flex;
             justify-content: center;
+            gap: 3vw; /* 间距随屏幕变 */
+            width: 100%;
+            padding: 20px 0;
+            min-height: 180px; /* 留出足够高度 */
             align-items: center;
         }
 
         .card {
-            width: 80px; height: 110px;
+            /* 响应式大小：在手机上大，iPad上合适 */
+            width: 20vw;
+            height: 28vw;
+            max-width: 100px;
+            max-height: 140px;
             background: var(--card-bg);
-            border: 2px solid #333; border-radius: 10px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 28px; font-weight: bold; color: var(--text-color);
-            box-shadow: 3px 3px 8px rgba(0,0,0,0.15);
-            cursor: pointer; transition: all 0.3s ease;
-            position: absolute; 
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-main);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: transform 0.2s, border-color 0.2s;
+            cursor: pointer;
+            position: relative;
         }
-        .card:hover { transform: translateY(-5px); box-shadow: 3px 8px 15px rgba(0,0,0,0.2); }
-        .card.selected { background-color: var(--selected-color); border-color: #ff9800; transform: scale(1.1); z-index: 10; }
-        .card span.expr { font-size: 12px; color: #666; margin-top: 5px; font-weight: normal; }
 
-        /* --- 弹窗 & 遮罩 --- */
+        /* 选中的卡牌 */
+        .card.selected {
+            background-color: #FFF9C4; /* 浅黄 */
+            border-color: var(--accent);
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 8px 20px rgba(255, 152, 0, 0.3);
+            z-index: 10;
+        }
+
+        .card .expr {
+            font-size: 12px;
+            color: #888;
+            font-weight: normal;
+            position: absolute;
+            bottom: 8px;
+            width: 90%;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* --- 底部按钮区 --- */
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: auto;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 0 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: active 0.1s;
+            /* 移动端触摸优化 */
+            min-width: 100px;
+            touch-action: manipulation; 
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: var(--secondary); color: white; }
+        .btn-warn { background: var(--accent); color: white; }
+        .btn-sub { background: #fff; color: #555; border: 1px solid #eee; }
+
+        /* --- 弹窗 (Modal) --- */
         .overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 90; backdrop-filter: blur(2px);
+            background: rgba(0,0,0,0.6); z-index: 99; backdrop-filter: blur(3px);
         }
         .modal {
             display: none; position: fixed; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); background: white;
-            padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            z-index: 100; text-align: center; min-width: 320px; max-height: 80vh; overflow-y: auto;
+            transform: translate(-50%, -50%);
+            background: white; width: 85%; max-width: 360px;
+            border-radius: 20px; padding: 25px;
+            z-index: 100; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            text-align: center;
+            animation: popIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
         }
 
-        /* 运算菜单 */
-        .op-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .op-btn { padding: 10px; border: 1px solid #ddd; background: white; border-radius: 8px; cursor: pointer; font-size: 16px; }
-        .op-btn:hover { background-color: var(--primary-color); color: white; }
-
-        /* 表格样式 */
-        table.data-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 14px;}
-        table.data-table th { text-align: left; color: #555; border-bottom: 2px solid #eee; padding: 8px; background: #f9f9f9;}
-        table.data-table td { padding: 8px; border-bottom: 1px solid #eee; }
-        .rank-1 { color: #FFD700; font-weight: bold; } 
-
-        /* --- 按钮 --- */
-        .controls { margin-top: 1rem; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-        button.ctrl-btn {
-            padding: 8px 16px; font-size: 14px; border: none; border-radius: 20px;
-            cursor: pointer; background-color: #2196F3; color: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: transform 0.1s;
+        @keyframes popIn {
+            from { opacity: 0; transform: translate(-50%, -40%) scale(0.9); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
         }
-        button.ctrl-btn:active { transform: scale(0.95); }
-        button.btn-reset { background-color: #ff9800; }
-        button.btn-custom { background-color: #9c27b0; }
-        button.btn-gray { background-color: #607d8b; }
-        button.btn-history { background-color: #009688; }
 
-        input.name-input { padding: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px; width: 80%; margin: 15px 0; }
-        
-        .message-box { height: 30px; margin-top: 10px; font-size: 16px; font-weight: bold; }
-        .success { color: #2e7d32; }
-        .fail { color: #c62828; }
+        /* 运算选择器布局 */
+        .op-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 15px;
+        }
+        .op-btn {
+            background: #f8f9fa; border: 1px solid #eee;
+            padding: 15px 5px; border-radius: 12px;
+            font-size: 16px; font-weight: 500;
+            color: #333;
+        }
+        .op-btn b { font-size: 18px; color: var(--secondary); }
+        .op-btn:active { background: #e3f2fd; border-color: var(--secondary); }
+
+        /* 登录 & 用户列表 */
+        .user-input {
+            width: 100%; padding: 12px; font-size: 18px;
+            border: 2px solid #eee; border-radius: 10px;
+            margin: 15px 0; box-sizing: border-box; text-align: center;
+        }
+        .user-input:focus { border-color: var(--secondary); outline: none; }
+
+        .quick-users {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 15px;
+        }
+        .user-tag {
+            background: #e0f7fa; color: #006064;
+            padding: 6px 12px; border-radius: 15px; font-size: 13px;
+            cursor: pointer; border: 1px solid transparent;
+        }
+        .user-tag:active { background: #b2ebf2; }
+
+        /* 排行榜 */
+        .rank-list { list-style: none; padding: 0; margin: 10px 0; max-height: 50vh; overflow-y: auto; }
+        .rank-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 5px; border-bottom: 1px solid #eee;
+            cursor: pointer; /* 可点击 */
+        }
+        .rank-item:active { background-color: #f5f5f5; }
+        .rank-info { display: flex; align-items: center; gap: 10px; }
+        .rank-num { width: 24px; font-weight: bold; color: #999; }
+        .rank-1 .rank-num { color: #FFD700; font-size: 1.2em; }
+        .rank-2 .rank-num { color: #90A4AE; font-size: 1.1em; }
+        .rank-3 .rank-num { color: #CD7F32; font-size: 1.1em; }
+        .switch-hint { font-size: 10px; color: var(--primary); background: #e8f5e9; padding: 2px 6px; border-radius: 4px; display: none;}
+        .rank-item:hover .switch-hint { display: inline-block; } /* PC hover */
 
     </style>
 </head>
 <body>
 
     <div class="top-bar">
-        <div class="user-info" id="user-display">未登录</div>
-        <div class="user-group">
-            <button class="ctrl-btn btn-history" onclick="showHistory()">📅 我的记录</button>
-            <button class="ctrl-btn btn-gray" onclick="showLeaderboard()">🏆 排行榜</button>
-            <button class="ctrl-btn btn-gray" onclick="showLoginModal(true)">🔁 切换</button>
+        <div class="user-pill" onclick="showLoginModal(true)">
+            <span id="current-user-name">未登录</span>
+            <span class="score" id="current-user-score">0</span>
+        </div>
+        <div class="top-actions">
+            <button onclick="showHistory()" title="历史记录">📅</button>
+            <button onclick="showLeaderboard()" title="排行榜">🏆</button>
         </div>
     </div>
 
-    <div class="header">
-        <h1>🎴 24点大挑战</h1>
-        <p style="color: #666; font-size: 12px;">系统会自动记录你每天的解题数量</p>
+    <div class="game-header">
+        <h1>24 点</h1>
+        <p>点击两张牌运算 · 13张牌模式</p>
     </div>
 
-    <div class="message-box" id="message"></div>
+    <div class="message-area" id="message"></div>
 
-    <div class="container" id="game-area"></div>
+    <div class="cards-container" id="game-area"></div>
 
     <div class="controls">
-        <button class="ctrl-btn btn-reset" onclick="resetGame()">重置本题</button>
-        <button class="ctrl-btn" onclick="newGame()">随机下一题</button>
-        <button class="ctrl-btn btn-custom" onclick="customGame()">自定义题目</button>
+        <button class="btn btn-sub" onclick="resetGame()">重置</button>
+        <button class="btn btn-warn" onclick="customGame()">自定义</button>
+        <button class="btn btn-primary" onclick="newGame()">跳过</button>
     </div>
 
     <div class="overlay" id="overlay"></div>
 
     <div class="modal" id="op-menu">
-        <h3>选择运算</h3>
-        <div class="op-options" id="op-list"></div>
-        <div style="margin-top: 15px;">
-            <button class="ctrl-btn btn-reset" onclick="closeModal('op-menu')">取消</button>
-        </div>
+        <h3 style="margin:0; color:#555;">选择运算</h3>
+        <div class="op-grid" id="op-list"></div>
+        <button class="btn btn-sub" style="margin-top:15px; width:100%" onclick="closeModal()">取消</button>
     </div>
 
-    <div class="modal" id="login-modal" style="z-index: 200;">
-        <h2>👋 欢迎挑战</h2>
-        <p>输入名字，记录你的每日成就</p>
-        <input type="text" id="username-input" class="name-input" placeholder="例如: 算术王" maxlength="10">
-        <div><button class="ctrl-btn" onclick="handleLogin()">开始游戏</button></div>
+    <div class="modal" id="login-modal">
+        <h2>👋 谁在玩?</h2>
+        <input type="text" id="username-input" class="user-input" placeholder="输入名字 (不区分大小写)" maxlength="12">
+        
+        <div id="quick-login-area" style="display:none; margin-bottom: 15px;">
+            <p style="font-size:12px; color:#888; margin:5px;">或选择已有用户:</p>
+            <div class="quick-users" id="existing-users-list"></div>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%" onclick="handleLogin()">确定</button>
     </div>
 
     <div class="modal" id="leaderboard-modal">
-        <h2>🏆 总分排行榜</h2>
-        <table class="data-table">
-            <thead><tr><th>排名</th><th>玩家</th><th>总题数</th><th>总积分</th></tr></thead>
-            <tbody id="leaderboard-body"></tbody>
-        </table>
-        <div style="margin-top: 15px;"><button class="ctrl-btn" onclick="closeModal('leaderboard-modal')">关闭</button></div>
+        <h2>🏆 排行榜</h2>
+        <p style="font-size:12px; color:#888;">点击列表直接切换用户</p>
+        <ul class="rank-list" id="rank-list"></ul>
+        <button class="btn btn-sub" style="margin-top:15px; width:100%" onclick="closeModal()">关闭</button>
     </div>
 
     <div class="modal" id="history-modal">
-        <h2 id="history-title">📅 历史记录</h2>
-        <div style="max-height: 300px; overflow-y: auto;">
-            <table class="data-table">
-                <thead><tr><th>日期</th><th>解题数量</th><th>获得积分</th></tr></thead>
-                <tbody id="history-body"></tbody>
-            </table>
-        </div>
-        <div style="margin-top: 15px;"><button class="ctrl-btn" onclick="closeModal('history-modal')">关闭</button></div>
+        <h2 id="history-title">📅 记录</h2>
+        <ul class="rank-list" id="history-list"></ul>
+        <button class="btn btn-sub" style="margin-top:15px; width:100%" onclick="closeModal()">关闭</button>
     </div>
 
 <script>
-    // --- 全局配置 ---
+    /* --- 配置与数据 v3 --- */
     const TARGET = 24;
-    const STORAGE_KEY = 'game24_data_v2'; // 使用新Key以应用新数据结构
-    const POINTS_PER_WIN = 10;
+    const STORAGE_KEY = 'game24_data_v3';
+    
+    // 全局状态
+    let appData = { users: {}, currentId: null }; // users key 为小写标准化ID
+    let game = {
+        initial: [],
+        cards: [],
+        selected: [],
+        idCounter: 0,
+        isCustom: false,
+        locked: false // 防止动画期间重复点击
+    };
 
-    // 游戏状态
-    let initialNumbers = []; 
-    let currentCards = [];   
-    let selectedIds = [];    
-    let cardIdCounter = 0;   
-    let isCustomMode = false; 
-
-    // 数据结构定义
-    // appData = {
-    //    users: {
-    //       "Alice": { totalScore: 100, history: { "2023-10-01": 20, "2023-10-02": 80 } }
-    //    },
-    //    currentUser: "Alice"
-    // }
-    let appData = { users: {}, currentUser: null };
-
-    // --- 初始化 ---
-    window.onload = function() {
+    /* --- 初始化 --- */
+    window.onload = () => {
         loadData();
-        if (!appData.currentUser) {
+        // 渲染一次UI以防空白
+        renderGame();
+        
+        if (!appData.currentId) {
             showLoginModal(false);
         } else {
-            updateUserDisplay();
+            updateUserUI();
             newGame();
         }
     };
 
-    // --- 数据管理 ---
+    /* --- 数据管理 (核心修改) --- */
     function loadData() {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-            try { appData = JSON.parse(raw); } catch(e) { console.error("数据损坏", e); }
-        }
-        if (!appData.users) appData.users = {};
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) appData = JSON.parse(raw);
+            if (!appData.users) appData.users = {};
+        } catch (e) { console.error("Data load error", e); }
     }
 
     function saveData() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
     }
 
-    function getTodayStr() {
-        const now = new Date();
-        // 处理时区问题，简单的 YYYY-MM-DD
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+    // 标准化ID (忽略大小写)
+    const normalize = (name) => name.trim().toLowerCase();
+
+    function switchUser(rawName) {
+        const id = normalize(rawName);
+        if (!id) return;
+
+        // 如果是新用户，初始化结构
+        if (!appData.users[id]) {
+            appData.users[id] = {
+                displayName: rawName.trim(), // 保留用户输入的原始大小写显示
+                totalScore: 0,
+                history: {}
+            };
+        }
+        
+        appData.currentId = id;
+        saveData();
+        updateUserUI();
+        
+        // 如果当前没有牌，或者已经赢了，发新牌
+        if (game.cards.length === 0 || (game.cards.length === 1 && Math.abs(game.cards[0].val - 24) < 0.001)) {
+            newGame();
+        }
     }
 
     function addScore() {
-        if (!appData.currentUser || isCustomMode) return;
+        if (!appData.currentId || game.isCustom) return;
+        const user = appData.users[appData.currentId];
         
-        const user = appData.currentUser;
-        // 确保用户数据结构存在
-        if (!appData.users[user]) {
-            appData.users[user] = { totalScore: 0, history: {} };
-        }
-        // 确保 history 对象存在 (兼容旧数据)
-        if (!appData.users[user].history) {
-            appData.users[user].history = {};
-        }
-        if (typeof appData.users[user].totalScore !== 'number') {
-             appData.users[user].totalScore = 0;
-        }
-
-        const today = getTodayStr();
+        const today = new Date().toISOString().slice(0, 10);
+        user.totalScore = (user.totalScore || 0) + 10;
+        user.history = user.history || {};
+        user.history[today] = (user.history[today] || 0) + 10;
         
-        // 更新今日分数
-        const currentDayScore = appData.users[user].history[today] || 0;
-        appData.users[user].history[today] = currentDayScore + POINTS_PER_WIN;
-        
-        // 更新总分
-        appData.users[user].totalScore += POINTS_PER_WIN;
-
         saveData();
-        updateUserDisplay();
+        updateUserUI();
     }
 
-    // --- UI显示逻辑 ---
-    function showLoginModal(canClose) {
-        const overlay = document.getElementById('overlay');
-        document.getElementById('username-input').value = "";
-        openModal('login-modal');
-        if (!canClose) {
-            overlay.onclick = null; // 强制登录不可关闭遮罩
-        }
-    }
-
-    function handleLogin() {
-        const name = document.getElementById('username-input').value.trim();
-        if (!name) return alert("请输入名字");
-
-        appData.currentUser = name;
-        // 初始化新用户结构
-        if (!appData.users[name]) {
-            appData.users[name] = { totalScore: 0, history: {} };
-        }
-        saveData();
-        closeModal('login-modal');
-        updateUserDisplay();
-        if(currentCards.length === 0) newGame();
-    }
-
-    function updateUserDisplay() {
-        const display = document.getElementById('user-display');
-        if (appData.currentUser && appData.users[appData.currentUser]) {
-            const score = appData.users[appData.currentUser].totalScore || 0;
-            display.innerHTML = `👤 ${appData.currentUser} <span class="score-badge">${score}分</span>`;
+    /* --- 界面渲染 --- */
+    function updateUserUI() {
+        if (appData.currentId && appData.users[appData.currentId]) {
+            const u = appData.users[appData.currentId];
+            document.getElementById('current-user-name').textContent = u.displayName;
+            document.getElementById('current-user-score').textContent = u.totalScore;
         } else {
-            display.innerHTML = "未登录";
+            document.getElementById('current-user-name').textContent = "请登录";
+            document.getElementById('current-user-score').textContent = "";
         }
     }
 
-    // --- 排行榜 (总分) ---
-    function showLeaderboard() {
-        const tbody = document.getElementById('leaderboard-body');
-        tbody.innerHTML = '';
-        
-        const list = Object.entries(appData.users)
-            .map(([name, data]) => ({
-                name, 
-                score: data.totalScore || 0
-            }))
-            .sort((a, b) => b.score - a.score);
-
-        if (list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">暂无记录</td></tr>';
-        } else {
-            list.forEach((u, idx) => {
-                // 题数 = 分数 / 10
-                let count = Math.floor(u.score / POINTS_PER_WIN);
-                let row = `<tr>
-                    <td class="${idx===0?'rank-1':''}">${idx + 1}</td>
-                    <td style="font-weight:bold">${u.name} ${u.name === appData.currentUser ? '(你)' : ''}</td>
-                    <td>${count} 题</td>
-                    <td>${u.score}</td>
-                </tr>`;
-                tbody.innerHTML += row;
-            });
-        }
-        openModal('leaderboard-modal');
+    function showMsg(text, type = "") {
+        const el = document.getElementById('message');
+        el.textContent = text;
+        el.className = 'message-area ' + (type === 'success' ? 'msg-success' : type === 'error' ? 'msg-error' : '');
     }
 
-    // --- 历史记录 (日期维度) ---
-    function showHistory() {
-        if (!appData.currentUser) return alert("请先登录");
-        
-        const userData = appData.users[appData.currentUser];
-        const history = userData.history || {};
-        const tbody = document.getElementById('history-body');
-        document.getElementById('history-title').innerText = `📅 ${appData.currentUser} 的记录`;
-        tbody.innerHTML = '';
-
-        // 按日期降序排列 (最新的在上面)
-        const dates = Object.keys(history).sort((a, b) => new Date(b) - new Date(a));
-
-        if (dates.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#888;">还没玩过游戏哦，快去挑战吧！</td></tr>';
-        } else {
-            dates.forEach(date => {
-                let score = history[date];
-                let count = Math.floor(score / POINTS_PER_WIN);
-                let row = `<tr>
-                    <td>${date}</td>
-                    <td style="font-weight:bold; color:#2196F3;">${count} 题</td>
-                    <td>+${score}</td>
-                </tr>`;
-                tbody.innerHTML += row;
-            });
-        }
-        openModal('history-modal');
-    }
-
-    // --- 游戏核心逻辑 (保持不变) ---
-    function isSolvable(numsData) {
-        if (numsData.length === 0) return false;
-        if (numsData.length === 1) return Math.abs(numsData[0].val - TARGET) < 0.0001;
-        for (let i = 0; i < numsData.length; i++) {
-            for (let j = 0; j < numsData.length; j++) {
-                if (i === j) continue;
-                let x = numsData[i].val, y = numsData[j].val;
-                let rem = numsData.filter((_, k) => k!==i && k!==j);
-                let ops = [x+y, x*y, x-y];
-                if (Math.abs(y) > 0.0001) ops.push(x/y);
-                for (let v of ops) if (isSolvable([...rem, {val:v}])) return true;
-            }
-        }
-        return false;
-    }
-
+    /* --- 游戏逻辑 --- */
     function newGame() {
-        isCustomMode = false;
+        game.isCustom = false;
+        game.locked = false;
+        // 生成必定有解的题
         while(true) {
             let nums = Array.from({length:4}, () => Math.floor(Math.random()*13)+1);
-            if(isSolvable(nums.map(n=>({val:n})))) { startGame(nums); break; }
+            if(solve(nums.map(n=>({val:n})))) {
+                initGame(nums);
+                break;
+            }
         }
     }
 
     function customGame() {
         let input = prompt("输入4个数字 (空格分隔):");
         if(!input) return;
-        let parts = input.replace(/[,，]/g, ' ').trim().split(/\s+/);
-        if(parts.length!==4) return alert("需要4个数字");
-        let nums = parts.map(Number);
-        if(nums.some(isNaN)) return alert("无效数字");
+        let nums = input.replace(/[,，]/g, ' ').trim().split(/\s+/).map(Number);
+        if(nums.length!==4 || nums.some(isNaN)) return alert("格式错误，需要4个数字");
         
-        isCustomMode = true;
-        startGame(nums);
-        if(!isSolvable(nums.map(n=>({val:n})))) setMessage("⚠️ 此题无解 (自定义模式)", "fail");
-        else setMessage("自定义题目 (不计分)", "success");
-    }
-
-    function startGame(nums) {
-        initialNumbers = [...nums];
-        resetGame();
+        game.isCustom = true;
+        game.locked = false;
+        initGame(nums);
+        if(!solve(nums.map(n=>({val:n})))) showMsg("⚠️ 注意：这组数字无解", "error");
+        else showMsg("自定义题目 (无积分)");
     }
 
     function resetGame() {
-        cardIdCounter = 0;
-        currentCards = initialNumbers.map(n => ({ val: n, expr: n.toString(), id: cardIdCounter++ }));
-        selectedIds = [];
-        closeModal('op-menu');
-        renderCards();
-        if(!isCustomMode) setMessage("点击两张牌运算", "normal");
+        game.locked = false;
+        initGame(game.initial);
     }
 
-    function renderCards() {
-        const con = document.getElementById('game-area');
-        con.innerHTML = '';
-        const count = currentCards.length;
-        const startX = (600 - (count * 90)) / 2 + 10;
+    function initGame(nums) {
+        game.initial = [...nums];
+        game.idCounter = 0;
+        game.cards = nums.map(n => ({ val: n, expr: n.toString(), id: game.idCounter++ }));
+        game.selected = [];
+        closeModal();
+        renderGame();
+        if(!game.isCustom) showMsg(""); 
+    }
+
+    function renderGame() {
+        const container = document.getElementById('game-area');
+        container.innerHTML = '';
         
-        currentCards.forEach((c, i) => {
-            let d = document.createElement('div');
-            d.className = `card ${selectedIds.includes(c.id)?'selected':''}`;
-            d.innerHTML = `<div>${Math.round(c.val*100)/100}</div>${c.expr!==c.val.toString()?`<span class='expr'>${c.expr}</span>`:''}`;
-            d.style.left = (startX + i*90) + 'px';
-            d.onclick = () => handleCardClick(c.id);
-            con.appendChild(d);
+        game.cards.forEach(c => {
+            const div = document.createElement('div');
+            const isSelected = game.selected.includes(c.id);
+            div.className = `card ${isSelected ? 'selected' : ''}`;
+            
+            // 显示逻辑：如果是整数显示整数，小数保留2位
+            let displayVal = parseFloat(c.val.toFixed(2));
+            div.innerHTML = `<div>${displayVal}</div>`;
+            
+            // 如果表达式不是纯数字，显示表达式
+            if (c.expr !== c.val.toString()) {
+                div.innerHTML += `<div class="expr">${c.expr}</div>`;
+            }
+
+            div.onclick = () => onCardClick(c.id);
+            container.appendChild(div);
         });
     }
 
-    function handleCardClick(id) {
-        if (selectedIds.includes(id)) selectedIds = selectedIds.filter(i => i !== id);
-        else selectedIds.push(id);
-        renderCards();
-        if (selectedIds.length === 2) showOps();
-        else if (selectedIds.length > 2) { selectedIds.shift(); renderCards(); showOps(); }
+    function onCardClick(id) {
+        if (game.locked) return;
+
+        const idx = game.selected.indexOf(id);
+        if (idx >= 0) {
+            game.selected.splice(idx, 1); // 取消选中
+        } else {
+            game.selected.push(id); // 选中
+        }
+        
+        renderGame();
+
+        if (game.selected.length === 2) {
+            showOperatorMenu();
+        } else if (game.selected.length > 2) {
+            // 超过2个，保留最新的两个
+            game.selected.shift();
+            renderGame();
+            showOperatorMenu();
+        }
     }
 
-    function showOps() {
-        const [id1, id2] = selectedIds;
-        const c1 = currentCards.find(c=>c.id===id1), c2 = currentCards.find(c=>c.id===id2);
+    /* --- 运算逻辑 --- */
+    function showOperatorMenu() {
+        const [id1, id2] = game.selected;
+        const c1 = game.cards.find(c => c.id === id1);
+        const c2 = game.cards.find(c => c.id === id2);
+        
         const list = document.getElementById('op-list');
         list.innerHTML = '';
-        
-        const addBtn = (v1, v2, op) => {
-            let res = 0;
-            if(op==='+') res = v1.val+v2.val;
-            else if(op==='-') res = v1.val-v2.val;
-            else if(op==='*') res = v1.val*v2.val;
-            else if(op==='/') { if(Math.abs(v2.val)<0.0001) return; res = v1.val/v2.val; }
-            
-            let b = document.createElement('button');
-            b.className = 'op-btn';
-            b.innerHTML = `${Math.round(v1.val*100)/100} ${op} ${Math.round(v2.val*100)/100} = <b>${Math.round(res*1000)/1000}</b>`;
-            b.onclick = () => applyOp(v1, v2, res, `(${v1.expr}${op}${v2.expr})`);
-            list.appendChild(b);
-        };
 
-        addBtn(c1, c2, '+'); addBtn(c1, c2, '-'); addBtn(c2, c1, '-');
-        addBtn(c1, c2, '*'); addBtn(c1, c2, '/'); addBtn(c2, c1, '/');
+        const ops = [
+            { op: '+', res: c1.val + c2.val, txt: `${fmt(c1.val)} + ${fmt(c2.val)}` },
+            { op: '-', res: c1.val - c2.val, txt: `${fmt(c1.val)} - ${fmt(c2.val)}` },
+            { op: '-', res: c2.val - c1.val, txt: `${fmt(c2.val)} - ${fmt(c1.val)}`, swap: true },
+            { op: '*', res: c1.val * c2.val, txt: `${fmt(c1.val)} × ${fmt(c2.val)}` },
+            { op: '/', res: c1.val / c2.val, txt: `${fmt(c1.val)} ÷ ${fmt(c2.val)}`, check: c2.val },
+            { op: '/', res: c2.val / c1.val, txt: `${fmt(c2.val)} ÷ ${fmt(c1.val)}`, check: c1.val, swap: true },
+        ];
+
+        ops.forEach(o => {
+            if (o.check !== undefined && Math.abs(o.check) < 0.001) return; // 除数非0
+            
+            const btn = document.createElement('div');
+            btn.className = 'op-btn';
+            btn.innerHTML = `${o.txt} = <b>${fmt(o.res)}</b>`;
+            btn.onclick = () => doMath(c1, c2, o.res, o.op, o.swap);
+            list.appendChild(btn);
+        });
+
         openModal('op-menu');
     }
 
-    function applyOp(c1, c2, val, expr) {
-        closeModal('op-menu');
-        let next = currentCards.filter(c=>c.id!==c1.id && c.id!==c2.id);
-        next.push({val, expr, id: cardIdCounter++});
+    function doMath(c1, c2, val, op, swapped) {
+        closeModal();
+        
+        // 构造新表达式
+        let e1 = c1.expr, e2 = c2.expr;
+        let newExpr = swapped ? `(${e2}${op}${e1})` : `(${e1}${op}${e2})`;
+        
+        // 预测新状态
+        let nextCards = game.cards.filter(c => c.id !== c1.id && c.id !== c2.id);
+        nextCards.push({ val: val, expr: newExpr, id: game.idCounter++ });
 
-        // 快速死局检测
-        if(next.length > 1 && !isSolvable(next.map(c=>({val:c.val})))) {
-            currentCards = next; renderCards();
-            setTimeout(() => { alert("❌ 死局！即将重置。"); resetGame(); }, 300);
-            return;
+        // 死局检测
+        if (nextCards.length > 1 && !solve(nextCards.map(c => ({val: c.val})))) {
+             // 暂时显示一下让用户知道结果，然后报错
+             game.cards = nextCards;
+             game.selected = [];
+             renderGame();
+             game.locked = true;
+             showMsg("❌ 这步走完无解了", "error");
+             setTimeout(() => {
+                 alert("死局！将自动重置本题。");
+                 resetGame();
+             }, 400);
+             return;
         }
 
-        currentCards = next; selectedIds = []; renderCards();
+        // 更新状态
+        game.cards = nextCards;
+        game.selected = [];
+        renderGame();
 
-        if(currentCards.length === 1) {
-            if(Math.abs(currentCards[0].val - TARGET) < 0.0001) {
-                if(!isCustomMode) {
+        // 检查胜利
+        if (game.cards.length === 1) {
+            if (Math.abs(game.cards[0].val - TARGET) < 0.001) {
+                // 胜利逻辑 (修改点1：自动下一题)
+                game.locked = true; // 锁定防止操作
+                if (!game.isCustom) {
                     addScore();
-                    setMessage("🎉 成功！积分+10", "success");
+                    showMsg("🎉 算对啦！积分 +10", "success");
                 } else {
-                    setMessage("🎉 成功！(不计分)", "success");
+                    showMsg("🎉 成功！(自定义不加分)", "success");
                 }
-                // setTimeout(() => { if(confirm("继续下一题？")) newGame(); }, 500);
-                setTimeout(() => { newGame(); }, 1000);
-
+                
+                // 1秒后自动下一题
+                setTimeout(() => {
+                    newGame();
+                }, 1200);
             } else {
-                setMessage(`❌ 结果是 ${Math.round(currentCards[0].val*100)/100}`, "fail");
-                setTimeout(resetGame, 1000);
+                showMsg(`❌ 结果是 ${fmt(game.cards[0].val)}，不对哦`, "error");
+                setTimeout(resetGame, 1500);
             }
         }
     }
 
-    function setMessage(txt, type="normal") {
-        const el = document.getElementById('message');
-        el.innerText = txt; el.className = "message-box " + type;
+    function fmt(n) { return parseFloat(n.toFixed(3)); }
+
+    /* --- 求解算法 (DFS) --- */
+    function solve(nums) {
+        if (nums.length === 0) return false;
+        if (nums.length === 1) return Math.abs(nums[0].val - TARGET) < 0.001;
+        for (let i = 0; i < nums.length; i++) {
+            for (let j = 0; j < nums.length; j++) {
+                if (i === j) continue;
+                let rem = nums.filter((_, k) => k!==i && k!==j);
+                let a = nums[i].val, b = nums[j].val;
+                let cands = [a+b, a-b, a*b];
+                if (Math.abs(b)>0.001) cands.push(a/b);
+                for (let v of cands) if (solve([...rem, {val:v}])) return true;
+            }
+        }
+        return false;
     }
 
-    // 弹窗控制
+    /* --- 弹窗与交互逻辑 --- */
     function openModal(id) {
         document.getElementById('overlay').style.display = 'block';
         document.getElementById(id).style.display = 'block';
-        if(id !== 'login-modal') document.getElementById('overlay').onclick = () => closeModal(id);
     }
-    function closeModal(id) {
+    
+    function closeModal() {
+        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
         document.getElementById('overlay').style.display = 'none';
-        document.getElementById(id).style.display = 'none';
-        selectedIds = []; renderCards();
+        game.selected = []; // 取消选中
+        renderGame();
     }
+    
+    // 点击遮罩关闭 (除了强制登录)
+    document.getElementById('overlay').onclick = () => {
+        // 如果当前是登录框且未登录，不许关闭
+        if (document.getElementById('login-modal').style.display === 'block' && !appData.currentId) return;
+        closeModal();
+    };
+
+    /* --- 用户相关弹窗逻辑 --- */
+    function showLoginModal(canClose) {
+        const input = document.getElementById('username-input');
+        input.value = "";
+        
+        // 渲染已有用户列表 (修改点2)
+        const listDiv = document.getElementById('existing-users-list');
+        const area = document.getElementById('quick-login-area');
+        listDiv.innerHTML = '';
+        
+        const existingUsers = Object.values(appData.users);
+        if (existingUsers.length > 0) {
+            area.style.display = 'block';
+            existingUsers.forEach(u => {
+                const tag = document.createElement('div');
+                tag.className = 'user-tag';
+                tag.innerText = u.displayName;
+                tag.onclick = () => {
+                    switchUser(u.displayName);
+                    closeModal();
+                };
+                listDiv.appendChild(tag);
+            });
+        } else {
+            area.style.display = 'none';
+        }
+
+        openModal('login-modal');
+        // 移除或添加遮罩点击事件
+        const overlay = document.getElementById('overlay');
+        overlay.onclick = canClose ? closeModal : null;
+    }
+
+    function handleLogin() {
+        const name = document.getElementById('username-input').value;
+        if (!name.trim()) return alert("请输入名字");
+        switchUser(name);
+        closeModal();
+    }
+
+    function showLeaderboard() {
+        const list = document.getElementById('rank-list');
+        list.innerHTML = '';
+        
+        const sorted = Object.values(appData.users).sort((a,b) => (b.totalScore||0) - (a.totalScore||0));
+        
+        if (sorted.length === 0) list.innerHTML = '<li style="text-align:center;color:#999;padding:10px;">暂无数据</li>';
+        
+        sorted.forEach((u, i) => {
+            const li = document.createElement('li');
+            li.className = `rank-item rank-${i+1}`;
+            li.innerHTML = `
+                <div class="rank-info">
+                    <span class="rank-num">${i+1}</span>
+                    <span>${u.displayName} ${normalize(u.displayName) === appData.currentId ? '(我)' : ''}</span>
+                    <span class="switch-hint">点击切换</span>
+                </div>
+                <b>${u.totalScore}</b>
+            `;
+            // 点击排行榜直接切换 (修改点2)
+            li.onclick = () => {
+                if (normalize(u.displayName) !== appData.currentId) {
+                    if(confirm(`切换身份为 "${u.displayName}" ?`)) {
+                        switchUser(u.displayName);
+                        closeModal();
+                    }
+                }
+            };
+            list.appendChild(li);
+        });
+        openModal('leaderboard-modal');
+    }
+
+    function showHistory() {
+        if (!appData.currentId) return;
+        const u = appData.users[appData.currentId];
+        const list = document.getElementById('history-list');
+        document.getElementById('history-title').innerText = `📅 ${u.displayName} 的记录`;
+        list.innerHTML = '';
+        
+        const dates = Object.keys(u.history || {}).sort((a,b) => new Date(b) - new Date(a));
+        if (dates.length === 0) list.innerHTML = '<li style="text-align:center;color:#999;padding:10px;">暂无记录</li>';
+        
+        dates.forEach(d => {
+            const li = document.createElement('li');
+            li.className = 'rank-item';
+            li.innerHTML = `<span>${d}</span> <b style="color:var(--secondary)">+${u.history[d]}分</b>`;
+            list.appendChild(li);
+        });
+        openModal('history-modal');
+    }
+
 </script>
 </body>
 </html>
