@@ -340,7 +340,7 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxdnBraWdtemNnbXRxc3doZnFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NjM0NjIsImV4cCI6MjA3OTUzOTQ2Mn0.jXeriWWLII6mx_-Gx-EkhALHNAZJ7iP89x4FvqTN0cQ';                // 替换为你的 Key
     // ==========================================
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabaselocal = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const TARGET = 24;
     
     // 游戏状态
@@ -364,12 +364,12 @@
         showLoading(`正在同步 ${name} 的数据...`);
         try {
             // 1. 尝试获取用户
-            let { data, error } = await supabase.from('scores').select('*').eq('username', name).single();
+            let { data, error } = await supabaselocal.from('scores').select('*').eq('username', name).single();
             
             if (!data) {
                 // 2. 如果用户不存在，创建新用户
                 const newUser = { username: name, total_score: 0, history: {} };
-                const { error: insertError } = await supabase.from('scores').insert([newUser]);
+                const { error: insertError } = await supabaselocal.from('scores').insert([newUser]);
                 if (insertError) throw insertError;
                 currentUser = newUser;
             } else {
@@ -403,7 +403,7 @@
         updateUserUI(); // 界面立即更新，无需等待网络
 
         // 异步上传云端
-        const { error } = await supabase
+        const { error } = await supabaselocal
             .from('scores')
             .update({ 
                 total_score: currentUser.total_score,
@@ -417,7 +417,7 @@
 
     async function fetchLeaderboard() {
         showLoading("加载排行榜...");
-        const { data, error } = await supabase
+        const { data, error } = await supabaselocal
             .from('scores')
             .select('username, total_score')
             .order('total_score', { ascending: false })
