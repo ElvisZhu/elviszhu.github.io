@@ -1,0 +1,17 @@
+name: Supabase Keep Alive
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"  # 每12小时
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        run: |
+          curl https://yqvpkigmzcgmtqswhfqn.supabase.co/rest/v1/scores \
+          -H "Content-Type: application/json" \
+          -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxdnBraWdtemNnbXRxc3doZnFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NjM0NjIsImV4cCI6MjA3OTUzOTQ2Mn0.jXeriWWLII6mx_-Gx-EkhALHNAZJ7iP89x4FvqTN0cQ" \
+          -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxdnBraWdtemNnbXRxc3doZnFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NjM0NjIsImV4cCI6MjA3OTUzOTQ2Mn0.jXeriWWLII6mx_-Gx-EkhALHNAZJ7iP89x4FvqTN0cQ"
